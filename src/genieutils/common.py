@@ -96,11 +96,13 @@ class ByteHandler:
         
     def __getattr__(self, name_: str):
         if match := _ARRAY_PATTERN.match(name_):
-            group = match.groupdict()
-            size = int(group['size'])
-            method = getattr(self, group['method'] + '_array')
-            return lambda *args, **kwargs: tuple(method(*args, size=size, **kwargs))
+            return self._get_array_method(**match.groupdict())
         return super().__getattribute__(name_)
+
+    def _get_array_method(self, method, size: int):
+        size = int(size)
+        method = getattr(self, method + '_array')
+        return lambda *args, **kwargs: tuple(method(*args, size=size, **kwargs))
 
     def consume_range(self, length: int) -> memoryview:
         start = self.offset
