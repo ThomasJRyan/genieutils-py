@@ -1,3 +1,5 @@
+import re
+
 from abc import ABC
 from enum import IntEnum
 from typing import TypeVar, Sequence
@@ -84,12 +86,21 @@ class GenieClass(ABC):
 
 C = TypeVar('C', bound=GenieClass)
 
+_ARRAY_PATTERN = re.compile(r'^(?P<method>read_\S+)_array_(?P<size>\d+)$')
 
 class ByteHandler:
     def __init__(self, content: memoryview):
         self.content = content
         self.offset = 0
         self.version: Version = Version.UNDEFINED
+        
+    def __getattr__(self, name_: str):
+        if match := _ARRAY_PATTERN.match(name_):
+            group = match.groupdict()
+            size = int(group['size'])
+            method = getattr(self, group['method'] + '_array')
+            return lambda *args, **kwargs: tuple(method(*args, size=size, **kwargs))
+        return super().__getattribute__(name_)
 
     def consume_range(self, length: int) -> memoryview:
         start = self.offset
@@ -111,130 +122,36 @@ class ByteHandler:
 
     def read_int_8_array(self, size: int) -> list[int]:
         elements = []
-        for i in range(size):
+        for _ in range(size):
             elements.append(self.read_int_8())
         return elements
-
-    def read_int_8_array_2(self) -> tuple[int, int]:
-        element_0 = self.read_int_8()
-        element_1 = self.read_int_8()
-        return element_0, element_1
-
-    def read_int_8_array_3(self) -> tuple[int, int, int]:
-        element_0 = self.read_int_8()
-        element_1 = self.read_int_8()
-        element_2 = self.read_int_8()
-        return element_0, element_1, element_2
-
-    def read_int_8_array_5(self) -> tuple[int, int, int, int, int]:
-        element_0 = self.read_int_8()
-        element_1 = self.read_int_8()
-        element_2 = self.read_int_8()
-        element_3 = self.read_int_8()
-        element_4 = self.read_int_8()
-        return element_0, element_1, element_2, element_3, element_4
-
-    def read_int_8_array_6(self) -> tuple[int, int, int, int, int, int]:
-        element_0 = self.read_int_8()
-        element_1 = self.read_int_8()
-        element_2 = self.read_int_8()
-        element_3 = self.read_int_8()
-        element_4 = self.read_int_8()
-        element_5 = self.read_int_8()
-        return element_0, element_1, element_2, element_3, element_4, element_5
-
-    def read_int_8_array_10(self) -> tuple[int, int, int, int, int, int, int, int, int, int]:
-        element_0 = self.read_int_8()
-        element_1 = self.read_int_8()
-        element_2 = self.read_int_8()
-        element_3 = self.read_int_8()
-        element_4 = self.read_int_8()
-        element_5 = self.read_int_8()
-        element_6 = self.read_int_8()
-        element_7 = self.read_int_8()
-        element_8 = self.read_int_8()
-        element_9 = self.read_int_8()
-        return (element_0, element_1, element_2, element_3, element_4, element_5, element_6, element_7, element_8,
-                element_9)
 
     def read_int_16(self, signed=True) -> int:
         return Int.from_bytes(self.consume_range(2), signed=signed)
 
     def read_int_16_array(self, size: int) -> list[int]:
         elements = []
-        for i in range(size):
+        for _ in range(size):
             elements.append(self.read_int_16())
         return elements
-
-    def read_int_16_array_2(self) -> tuple[int, int]:
-        element_0 = self.read_int_16()
-        element_1 = self.read_int_16()
-        return element_0, element_1
-
-    def read_int_16_array_3(self) -> tuple[int, int, int]:
-        element_0 = self.read_int_16()
-        element_1 = self.read_int_16()
-        element_2 = self.read_int_16()
-        return element_0, element_1, element_2
-
-    def read_int_16_array_4(self) -> tuple[int, int, int, int]:
-        element_0 = self.read_int_16()
-        element_1 = self.read_int_16()
-        element_2 = self.read_int_16()
-        element_3 = self.read_int_16()
-        return element_0, element_1, element_2, element_3
-
-    def read_int_16_array_6(self) -> tuple[int, int, int, int, int, int]:
-        element_0 = self.read_int_16()
-        element_1 = self.read_int_16()
-        element_2 = self.read_int_16()
-        element_3 = self.read_int_16()
-        element_4 = self.read_int_16()
-        element_5 = self.read_int_16()
-        return element_0, element_1, element_2, element_3, element_4, element_5
 
     def read_int_32(self, signed=True) -> int:
         return Int.from_bytes(self.consume_range(4), signed=signed)
 
     def read_int_32_array(self, size: int) -> list[int]:
         elements = []
-        for i in range(size):
+        for _ in range(size):
             elements.append(self.read_int_32())
         return elements
-
-    def read_int_32_array_10(self) -> tuple[int, int, int, int, int, int, int, int, int, int]:
-        element_0 = self.read_int_32()
-        element_1 = self.read_int_32()
-        element_2 = self.read_int_32()
-        element_3 = self.read_int_32()
-        element_4 = self.read_int_32()
-        element_5 = self.read_int_32()
-        element_6 = self.read_int_32()
-        element_7 = self.read_int_32()
-        element_8 = self.read_int_32()
-        element_9 = self.read_int_32()
-        return (element_0, element_1, element_2, element_3, element_4, element_5, element_6, element_7, element_8,
-                element_9)
 
     def read_float(self) -> float:
         return Float.from_bytes(self.consume_range(4))
 
     def read_float_array(self, size: int) -> list[float]:
         elements = []
-        for i in range(size):
+        for _ in range(size):
             elements.append(self.read_float())
         return elements
-
-    def read_float_array_2(self) -> tuple[float, float]:
-        element_0 = self.read_float()
-        element_1 = self.read_float()
-        return element_0, element_1
-
-    def read_float_array_3(self) -> tuple[float, float, float]:
-        element_0 = self.read_float()
-        element_1 = self.read_float()
-        element_2 = self.read_float()
-        return element_0, element_1, element_2
 
     def read_class(self, class_: type[C]) -> C:
         element = class_.from_bytes(self)
@@ -242,23 +159,10 @@ class ByteHandler:
 
     def read_class_array(self, class_: type[C], size: int) -> list[C]:
         elements = []
-        for i in range(size):
+        for _ in range(size):
             element = class_.from_bytes(self)
             elements.append(element)
         return elements
-
-    def read_class_array_3(self, class_: type[C]) -> tuple[C, C, C]:
-        element_0 = class_.from_bytes(self)
-        element_1 = class_.from_bytes(self)
-        element_2 = class_.from_bytes(self)
-        return element_0, element_1, element_2
-
-    def read_class_array_4(self, class_: type[C]) -> tuple[C, C, C, C]:
-        element_0 = class_.from_bytes(self)
-        element_1 = class_.from_bytes(self)
-        element_2 = class_.from_bytes(self)
-        element_3 = class_.from_bytes(self)
-        return element_0, element_1, element_2, element_3
 
     def read_class_array_with_pointers(self, class_: type[C], size: int, pointers: list[int]) -> list[C | None]:
         elements = []
@@ -271,7 +175,7 @@ class ByteHandler:
 
     def read_class_array_with_param(self, class_: type[C], size: int, terrains_used_1: int) -> list[C]:
         elements = []
-        for i in range(size):
+        for _ in range(size):
             terrain_restriction = class_.from_bytes_with_count(self, terrains_used_1)
             elements.append(terrain_restriction)
         return elements
